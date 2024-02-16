@@ -102,6 +102,9 @@ in
     # authentik server
     (mkIf config.services.authentik.enable (let
       cfg = config.services.authentik;
+      # https://goauthentik.io/docs/installation/docker-compose#explanation
+      tz = "UTC";
+
     in
     {
       services = {
@@ -131,9 +134,6 @@ in
         };
       };
 
-      # https://goauthentik.io/docs/installation/docker-compose#explanation
-      time.timeZone = "UTC";
-
       environment.etc."authentik/config.yml".source = settingsFormat.generate "authentik.yml" cfg.settings;
 
       systemd.services = {
@@ -143,6 +143,7 @@ in
           after = lib.optionals cfg.createDatabase [ "postgresql.service" ];
           before = [ "authentik.service" ];
           restartTriggers = [ config.environment.etc."authentik/config.yml".source ];
+          environment.TZ = tz;
           serviceConfig = {
             Type = "oneshot";
             RemainAfterExit = true;
@@ -159,6 +160,7 @@ in
           preStart = ''
             ln -svf ${config.services.authentik.authentikComponents.staticWorkdirDeps}/* /run/authentik/
           '';
+          environment.TZ = tz;
           serviceConfig = {
             RuntimeDirectory = "authentik";
             WorkingDirectory = "%t/authentik";
@@ -185,6 +187,7 @@ in
             ln -svf ${cfg.authentikComponents.staticWorkdirDeps}/* /var/lib/authentik/
             mkdir -p ${cfg.settings.paths.media}
           '';
+          environment.TZ = tz;
           serviceConfig = {
             Environment = [
               "AUTHENTIK_ERROR_REPORTING__ENABLED=false"
